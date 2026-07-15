@@ -76,7 +76,7 @@ export default function DeliveryLoginPage() {
           </button>
         </form>
 
-        <div className="w-full min-h-[40px] mt-4">
+        <div className="w-full min-h-10 mt-4">
           <AnimatePresence>
             {error && (
               <motion.div
