@@ -1,12 +1,14 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  --brand-green-dark: #073B24;
+  --brand-green-dark: #015a41;
   --brand-green-light: #0D5636;
   --brand-gold: #e7aa31;
   --brand-cream: #ffe1ae;
+  --brand-cream-soft: #FFFDF9;
   
-  --background: #ffffff;
+  --background: var(--brand-cream-soft);
   --foreground: #171717;
 }
 
@@ -15,19 +17,24 @@
   --color-brand-green-light: var(--brand-green-light);
   --color-brand-gold: var(--brand-gold);
   --color-brand-cream: var(--brand-cream);
+  --color-brand-cream-soft: var(--brand-cream-soft);
+  --font-serif: 'Cinzel', serif;
+  --font-sans: 'Inter', sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* 🏰 Authentic Empire Plaza Geometric Diamond/Star Pattern Overlay */
+/* 🏰 AUTHENTIC EMPIRE GEOMETRIC PATTERN (FIXED CLEAN SVG) */
 .empire-geometric-bg {
-  background-color: var(--brand-green-dark);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg stroke='rgba(220, 169, 99, 0.05)' stroke-width='0.75' fill='none'%3E%3C!-- Central Diamond Squares --%3E%3Cpath d='M40 0 L80 40 L40 80 L0 40 Z'/%3E%3Cpath d='M40 10 L70 40 L40 70 L10 40 Z'/%3E%3C!-- Cross Axis Lines --%3E%3Cpath d='M0 40 H80 M40 0 V80' stroke='rgba(220, 169, 99, 0.03)'/%3E%3C!-- 8-Pointed Star Motif Corners --%3E%3Cpath d='M20 20 L60 60 M60 20 L20 60'/%3E%3Cpath d='M0 0 L80 80 M80 0 L0 80' stroke='rgba(220, 169, 99, 0.02)'/%3E%3Cpath d='M40 0 L40 80 M0 40 H80'/%3E%3C!-- Intersecting Outer Tile Frames --%3E%3Crect x='20' y='20' width='40' height='40' stroke='rgba(220, 169, 99, 0.03)'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 60px 60px;
+  background-color: #015a41 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg stroke='rgba(231,170,49,0.12)' stroke-width='0.75' fill='none'%3E%3Cpath d='M40 0 L80 40 L40 80 L0 40 Z'/%3E%3Cpath d='M40 10 L70 40 L40 70 L10 40 Z'/%3E%3Cpath d='M0 40 H80 M40 0 V80' stroke='rgba(231,170,49,0.06)'/%3E%3Cpath d='M20 20 L60 60 M60 20 L20 60'/%3E%3Crect x='20' y='20' width='40' height='40' stroke='rgba(231,170,49,0.1)'/%3E%3C/g%3E%3C/svg%3E") !important;
+  background-size: 70px 70px !important;
+  background-repeat: repeat !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
