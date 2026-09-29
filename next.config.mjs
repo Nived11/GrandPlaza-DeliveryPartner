@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
+    const backendUrl = process.env.BACKEND_API_URL || 'https://empireplaza.pythonanywhere.com';
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.BACKEND_API_URL}/api/:path*`,
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
