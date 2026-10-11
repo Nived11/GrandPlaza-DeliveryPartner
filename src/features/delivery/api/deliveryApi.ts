@@ -11,8 +11,12 @@ export const getAvailableDeliveriesApi = async (): Promise<DeliveryOrder[]> => {
   return response.data;
 };
 
-// 🛵 2. Fetch current in-progress delivery assigned to this rider
-export const getCurrentDeliveryApi = async (): Promise<{ active_delivery: DeliveryAssignment | null }> => {
+// 🛵 2. Fetch current in-progress deliveries assigned to this rider
+export const getCurrentDeliveryApi = async (): Promise<{
+  active_delivery: DeliveryAssignment | null;
+  active_deliveries?: DeliveryAssignment[];
+  active_count?: number;
+}> => {
   const response = await axiosInstance.get('/delivery/current');
   return response.data;
 };
@@ -48,5 +52,11 @@ export const acceptDeliveryApi = async (orderId: number): Promise<DeliveryAssign
 // 🏁 7. Complete active delivery and collect payment
 export const completeDeliveryApi = async (orderId: number): Promise<DeliveryAssignment> => {
   const response = await axiosInstance.post(`/delivery/orders/${orderId}/complete`);
+  return response.data;
+};
+
+// 📍 8. Send live GPS coordinates
+export const updateLocationApi = async (latitude: number, longitude: number): Promise<any> => {
+  const response = await axiosInstance.post('/delivery/update-location', { latitude, longitude });
   return response.data;
 };

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { extractErrorMessages } from '@/utils/extractErrorMessages';
+import { getPusherClient } from '@/lib/pusherClient';
 import {
   getAvailableDeliveriesApi,
   getCurrentDeliveryApi,
@@ -10,6 +11,7 @@ import {
   toggleDutyStatusApi,
   acceptDeliveryApi,
   completeDeliveryApi,
+  updateLocationApi,
 } from '../api/deliveryApi';
 import {
   DeliveryAssignment,
@@ -47,20 +49,23 @@ const playNewPickupChime = () => {
   }
 };
 
+export const MAX_BATCH_LIMIT = 4;
+
 export function useDeliveryPartner() {
   const [profile, setProfile] = useState<DeliveryBoyProfileData | null>(null);
   const [isOnDuty, setIsOnDuty] = useState(true);
-  const [activeDelivery, setActiveDelivery] = useState<DeliveryAssignment | null>(null);
+  const [activeDeliveries, setActiveDeliveries] = useState<DeliveryAssignment[]>([]);
   const [availableOrders, setAvailableOrders] = useState<DeliveryOrder[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isAccepting, setIsAccepting] = useState<number | null>(null);
-  const [isCompleting, setIsCompleting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState<number | null>(null);
   const [isTogglingDuty, setIsTogglingDuty] = useState(false);
 
   const knownAvailableIdsRef = useRef<Set<number>>(new Set());
   const isFirstLoadRef = useRef(true);
+  const lastLocationSentRef = useRef<number>(0);
 
   // 1. Fetch Profile and Duty Status
   const fetchProfile = useCallback(async () => {
@@ -73,19 +78,26 @@ export function useDeliveryPartner() {
     }
   }, []);
 
-  // 2. Fetch Active Delivery & Available Orders
+  // 2. Fetch Active Deliveries & Available Orders
   const loadDeliveryData = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
 
       try {
-        // Fetch current active delivery and available pickups in parallel
         const [currentRes, availableRes] = await Promise.all([
           getCurrentDeliveryApi(),
           getAvailableDeliveriesApi(),
         ]);
 
-        setActiveDelivery(currentRes.active_delivery);
+        // Support multi-order array from backend
+        const currentList: DeliveryAssignment[] =
+          currentRes.active_deliveries && currentRes.active_deliveries.length > 0
+            ? currentRes.active_deliveries
+            : currentRes.active_delivery
+            ? [currentRes.active_delivery]
+            : [];
+
+        setActiveDeliveries(currentList);
 
         const orders = Array.isArray(availableRes) ? availableRes : [];
         setAvailableOrders(orders);
@@ -123,14 +135,70 @@ export function useDeliveryPartner() {
     loadDeliveryData(false);
   }, [fetchProfile, loadDeliveryData]);
 
-  // Polling every 10 seconds for real-time order updates
+  // ⚡ 3. Realtime Pusher Subscription on 'orders-channel'
+  useEffect(() => {
+    const pusher = getPusherClient();
+    if (!pusher) return;
+
+    const channel = pusher.subscribe('orders-channel');
+
+    const handleRealtimeUpdate = (data: any) => {
+      console.log('⚡ Pusher event received in Delivery Partner:', data);
+      // Silently reload deliveries and pickups immediately
+      loadDeliveryData(true);
+      fetchProfile();
+    };
+
+    channel.bind('order-ready-for-pickup', handleRealtimeUpdate);
+    channel.bind('order-status-updated', handleRealtimeUpdate);
+    channel.bind('new-order', handleRealtimeUpdate);
+
+    return () => {
+      channel.unbind('order-ready-for-pickup', handleRealtimeUpdate);
+      channel.unbind('order-status-updated', handleRealtimeUpdate);
+      channel.unbind('new-order', handleRealtimeUpdate);
+      pusher.unsubscribe('orders-channel');
+    };
+  }, [loadDeliveryData, fetchProfile]);
+
+  // Polling fallback every 15 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       loadDeliveryData(true);
-    }, 10000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [loadDeliveryData]);
+
+  // 📍 4. Live GPS Location Tracking
+  useEffect(() => {
+    if (!isOnDuty || typeof navigator === 'undefined' || !navigator.geolocation) {
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        // Throttle updates: send once every 20 seconds
+        if (now - lastLocationSentRef.current >= 20000) {
+          lastLocationSentRef.current = now;
+          updateLocationApi(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        }
+      },
+      (err) => {
+        console.debug('Geolocation watch warning:', err.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 10000,
+      }
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [isOnDuty]);
 
   // Manual Refresh
   const handleRefresh = async () => {
@@ -160,57 +228,62 @@ export function useDeliveryPartner() {
     }
   };
 
-  // Accept Ready Order
+  // Accept Ready Order (Up to MAX_BATCH_LIMIT)
   const handleAcceptOrder = async (orderId: number) => {
     if (!isOnDuty) {
       toast.error('You are currently OFFLINE! Turn on duty to accept orders.');
       return;
     }
 
+    if (activeDeliveries.length >= MAX_BATCH_LIMIT) {
+      toast.error(`Capacity full! You can hold maximum ${MAX_BATCH_LIMIT} orders simultaneously.`);
+      return;
+    }
+
     setIsAccepting(orderId);
     try {
       const assignedDelivery = await acceptDeliveryApi(orderId);
-      setActiveDelivery(assignedDelivery);
+      setActiveDeliveries((prev) => [...prev, assignedDelivery]);
       setAvailableOrders((prev) => prev.filter((o) => o.id !== orderId));
-      toast.success(`🛵 Order #${orderId} accepted! Proceed to pickup counter.`);
-      // Refresh profile to update is_busy
+      toast.success(`🛵 Order #${orderId} accepted! (${activeDeliveries.length + 1}/${MAX_BATCH_LIMIT} active)`);
       fetchProfile();
     } catch (err: unknown) {
       toast.error(extractErrorMessages(err));
-      // Refresh to get updated list
       loadDeliveryData(true);
     } finally {
       setIsAccepting(null);
     }
   };
 
-  // Mark Delivery Completed
+  // Mark Delivery Completed for a specific orderId
   const handleCompleteDelivery = async (orderId: number) => {
-    setIsCompleting(true);
+    setIsCompleting(orderId);
     try {
       await completeDeliveryApi(orderId);
-      setActiveDelivery(null);
+      setActiveDeliveries((prev) => prev.filter((d) => d.order !== orderId && d.order_details?.id !== orderId));
       toast.success(`🎉 Order #${orderId} delivered successfully! Payment confirmed.`);
-      // Refresh data to show available orders again
-      loadDeliveryData(false);
+      loadDeliveryData(true);
       fetchProfile();
     } catch (err: unknown) {
       toast.error(extractErrorMessages(err));
     } finally {
-      setIsCompleting(false);
+      setIsCompleting(null);
     }
   };
 
   return {
     profile,
     isOnDuty,
-    activeDelivery,
+    activeDeliveries,
+    activeDelivery: activeDeliveries[0] || null, // Backwards compatibility
     availableOrders,
     loading,
     refreshing,
     isAccepting,
     isCompleting,
     isTogglingDuty,
+    maxBatchLimit: MAX_BATCH_LIMIT,
+    canAcceptMore: isOnDuty && activeDeliveries.length < MAX_BATCH_LIMIT,
     handleRefresh,
     handleToggleDuty,
     handleAcceptOrder,

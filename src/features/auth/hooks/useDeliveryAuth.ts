@@ -23,7 +23,8 @@ export const useDeliveryAuth = () => {
       if (typeof window !== "undefined") {
         localStorage.setItem("user_role", role);
         localStorage.setItem("username", username);
-        document.cookie = `user_role=${role}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `user_role=${role}; path=/; max-age=2592000; SameSite=Lax`;
+
       }
 
       toast.success(`Welcome back, ${username}!`);

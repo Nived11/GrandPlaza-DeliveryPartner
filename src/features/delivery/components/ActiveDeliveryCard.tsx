@@ -12,7 +12,7 @@ import {
   ChevronUp,
   Receipt,
   Bike,
-  ShieldAlert,
+  Compass,
 } from 'lucide-react';
 import { DeliveryAssignment } from '../types/deliveryTypes';
 
@@ -20,12 +20,16 @@ interface ActiveDeliveryCardProps {
   delivery: DeliveryAssignment;
   onOpenCompleteModal: () => void;
   isCompleting: boolean;
+  orderIndex?: number;
+  totalOrders?: number;
 }
 
 export default function ActiveDeliveryCard({
   delivery,
   onOpenCompleteModal,
   isCompleting,
+  orderIndex = 1,
+  totalOrders = 1,
 }: ActiveDeliveryCardProps) {
   const [showItems, setShowItems] = useState(false);
   const order = delivery.order_details;
@@ -33,7 +37,9 @@ export default function ActiveDeliveryCard({
   if (!order) return null;
 
   const isCOD = order.payment_status === 'pending';
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+  
+  // 🧭 Direct turn-by-turn navigation in Google Maps App (Native driving directions)
+  const mapsNavigationUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
     order.delivery_address || 'Empire Plaza'
   )}`;
 
@@ -44,7 +50,7 @@ export default function ActiveDeliveryCard({
   });
 
   return (
-    <div className="bg-white rounded-3xl border-2 border-emerald-500 shadow-xl overflow-hidden relative">
+    <div className="bg-white rounded-3xl border-2 border-emerald-500 shadow-xl overflow-hidden relative transition-all">
       {/* 🟢 Live Active Status Header */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -55,7 +61,7 @@ export default function ActiveDeliveryCard({
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-300 animate-ping" />
               <span className="text-xs font-black uppercase tracking-wider">
-                Out for Delivery
+                Out for Delivery {totalOrders > 1 && `(${orderIndex}/${totalOrders})`}
               </span>
             </div>
             <span className="text-[11px] text-emerald-100 font-medium">
@@ -119,7 +125,7 @@ export default function ActiveDeliveryCard({
 
           <a
             href={`tel:${order.customer_phone}`}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition active:scale-95 shrink-0"
           >
             <Phone size={14} />
             <span>Call</span>
@@ -127,24 +133,27 @@ export default function ActiveDeliveryCard({
         </div>
 
         {/* 📍 Delivery Address & Maps Navigation */}
-        <div className="bg-gray-50 rounded-2xl p-3.5 border border-gray-100 space-y-2.5">
+        <div className="bg-gray-50 rounded-2xl p-3.5 border border-gray-100 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider flex items-center gap-1">
-              <MapPin size={12} /> Delivery Address
+              <MapPin size={12} /> Delivery Destination
             </span>
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
-            >
-              <Navigation size={12} /> Open Maps
-            </a>
           </div>
 
           <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">
             {order.delivery_address}
           </p>
+
+          {/* 🧭 Google Maps Driving Navigation Button */}
+          <a
+            href={mapsNavigationUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition active:scale-[0.98]"
+          >
+            <Compass size={15} />
+            <span>Open Google Maps Navigation</span>
+          </a>
 
           {/* Special Instructions */}
           {order.special_instructions && (
