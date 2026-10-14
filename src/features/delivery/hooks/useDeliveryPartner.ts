@@ -18,36 +18,7 @@ import {
   DeliveryBoyProfileData,
   DeliveryOrder,
 } from '../types/deliveryTypes';
-
-// 🔔 Clean Web Audio API chime for incoming delivery notification
-const playNewPickupChime = () => {
-  try {
-    const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-
-    const ctx = new AudioContextClass();
-    const now = ctx.currentTime;
-
-    // Upbeat 3-tone alert chime (C5 -> E5 -> G5)
-    const tones = [523.25, 659.25, 783.99];
-    tones.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-      gain.gain.setValueAtTime(0.25, now + idx * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.4);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.12);
-      osc.stop(now + idx * 0.12 + 0.4);
-    });
-  } catch (err) {
-    console.debug('Audio chime inhibited by browser interaction policy:', err);
-  }
-};
+import { playDeliveryCompleteChime } from '../utils/deliveryAudio';
 
 export const MAX_BATCH_LIMIT = 4;
 
@@ -56,6 +27,7 @@ export function useDeliveryPartner() {
   const [isOnDuty, setIsOnDuty] = useState(true);
   const [activeDeliveries, setActiveDeliveries] = useState<DeliveryAssignment[]>([]);
   const [availableOrders, setAvailableOrders] = useState<DeliveryOrder[]>([]);
+  const [incomingOrderOffer, setIncomingOrderOffer] = useState<DeliveryOrder | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,6 +38,12 @@ export function useDeliveryPartner() {
   const knownAvailableIdsRef = useRef<Set<number>>(new Set());
   const isFirstLoadRef = useRef(true);
   const lastLocationSentRef = useRef<number>(0);
+  const activeDeliveriesCountRef = useRef<number>(0);
+  const isOnDutyRef = useRef<boolean>(true);
+
+  // Keep refs updated for event callbacks
+  activeDeliveriesCountRef.current = activeDeliveries.length;
+  isOnDutyRef.current = isOnDuty;
 
   // 1. Fetch Profile and Duty Status
   const fetchProfile = useCallback(async () => {
@@ -102,14 +80,17 @@ export function useDeliveryPartner() {
         const orders = Array.isArray(availableRes) ? availableRes : [];
         setAvailableOrders(orders);
 
-        // Sound chime on new pickup orders arriving
+        // Check for new incoming orders
         if (isFirstLoadRef.current) {
           orders.forEach((o) => knownAvailableIdsRef.current.add(o.id));
           isFirstLoadRef.current = false;
         } else {
           const freshOrders = orders.filter((o) => !knownAvailableIdsRef.current.has(o.id));
           if (freshOrders.length > 0) {
-            playNewPickupChime();
+            // Trigger Swiggy/Zomato style full alert modal if rider is on duty and has capacity
+            if (isOnDutyRef.current && activeDeliveriesCountRef.current < MAX_BATCH_LIMIT) {
+              setIncomingOrderOffer(freshOrders[0]);
+            }
             toast.info(`🛵 New Pickup Ready: Order #${freshOrders[0].id}`, {
               duration: 4000,
             });
@@ -144,7 +125,6 @@ export function useDeliveryPartner() {
 
     const handleRealtimeUpdate = (data: any) => {
       console.log('⚡ Pusher event received in Delivery Partner:', data);
-      // Silently reload deliveries and pickups immediately
       loadDeliveryData(true);
       fetchProfile();
     };
@@ -161,11 +141,11 @@ export function useDeliveryPartner() {
     };
   }, [loadDeliveryData, fetchProfile]);
 
-  // Polling fallback every 15 seconds
+  // Polling fallback every 12 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       loadDeliveryData(true);
-    }, 15000);
+    }, 12000);
 
     return () => clearInterval(interval);
   }, [loadDeliveryData]);
@@ -219,6 +199,7 @@ export function useDeliveryPartner() {
       if (res.is_on_duty) {
         toast.success('🟢 You are now ONLINE! Ready for delivery orders.');
       } else {
+        setIncomingOrderOffer(null);
         toast.warning('🔴 You are now OFFLINE.');
       }
     } catch (err: unknown) {
@@ -228,7 +209,12 @@ export function useDeliveryPartner() {
     }
   };
 
-  // Accept Ready Order (Up to MAX_BATCH_LIMIT)
+  // Dismiss Incoming Order Pop-up
+  const dismissIncomingOffer = useCallback(() => {
+    setIncomingOrderOffer(null);
+  }, []);
+
+  // Accept Ready Order (Strict limit up to MAX_BATCH_LIMIT = 4)
   const handleAcceptOrder = async (orderId: number) => {
     if (!isOnDuty) {
       toast.error('You are currently OFFLINE! Turn on duty to accept orders.');
@@ -241,6 +227,7 @@ export function useDeliveryPartner() {
     }
 
     setIsAccepting(orderId);
+    setIncomingOrderOffer(null);
     try {
       const assignedDelivery = await acceptDeliveryApi(orderId);
       setActiveDeliveries((prev) => [...prev, assignedDelivery]);
@@ -261,6 +248,7 @@ export function useDeliveryPartner() {
     try {
       await completeDeliveryApi(orderId);
       setActiveDeliveries((prev) => prev.filter((d) => d.order !== orderId && d.order_details?.id !== orderId));
+      playDeliveryCompleteChime();
       toast.success(`🎉 Order #${orderId} delivered successfully! Payment confirmed.`);
       loadDeliveryData(true);
       fetchProfile();
@@ -277,6 +265,7 @@ export function useDeliveryPartner() {
     activeDeliveries,
     activeDelivery: activeDeliveries[0] || null, // Backwards compatibility
     availableOrders,
+    incomingOrderOffer,
     loading,
     refreshing,
     isAccepting,
@@ -288,5 +277,6 @@ export function useDeliveryPartner() {
     handleToggleDuty,
     handleAcceptOrder,
     handleCompleteDelivery,
+    dismissIncomingOffer,
   };
 }
