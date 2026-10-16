@@ -18,6 +18,7 @@ export interface DeliveryOrder {
   delivery_address: string;
   special_instructions?: string | null;
   total_price: string | number;
+  delivery_distance_km?: number;
   status: string;
   payment_status: PaymentStatus;
   items: OrderItem[];
@@ -47,4 +48,6 @@ export interface DeliveryBoyProfileData {
   is_busy: boolean;
   total_delivered: number;
   today_delivered: number;
+  today_km?: number;
+  total_km?: number;
 }

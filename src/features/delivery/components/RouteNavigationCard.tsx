@@ -58,11 +58,16 @@ export default function RouteNavigationCard({ order }: RouteNavigationCardProps)
         </div>
 
         {/* Step Connector Line with Live Bike Icon */}
-        <div className="ml-4 pl-4 border-l-2 border-dashed border-emerald-500/50 py-1.5 flex items-center gap-2">
+        <div className="ml-4 pl-4 border-l-2 border-dashed border-emerald-500/50 py-1.5 flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-emerald-300 font-bold flex items-center gap-1.5 bg-emerald-900/40 px-2.5 py-1 rounded-lg border border-emerald-800/60">
             <Clock size={12} className="text-emerald-400" />
             Turn-by-turn route to customer
           </span>
+          {order.delivery_distance_km !== undefined && order.delivery_distance_km > 0 && (
+            <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60 flex items-center gap-1">
+              <span>📍 {order.delivery_distance_km} KM</span>
+            </span>
+          )}
         </div>
 
         {/* Step 2: Customer Destination */}
