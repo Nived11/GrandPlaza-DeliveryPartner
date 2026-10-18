@@ -156,15 +156,44 @@ export function useDeliveryPartner() {
       return;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const now = Date.now();
-        // Throttle updates: send once every 5 seconds for Swiggy-like live tracking
-        if (now - lastLocationSentRef.current >= 5000) {
-          lastLocationSentRef.current = now;
-          updateLocationApi(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+    // Warn if running on insecure HTTP
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'http:' &&
+      window.location.hostname !== 'localhost' &&
+      window.location.hostname !== '127.0.0.1'
+    ) {
+      toast.warning('Live GPS requires secure HTTPS! Please open https://delivery.grandeplaza.com');
+    }
+
+    // Helper to send coordinates
+    const sendCoords = (coords: GeolocationCoordinates) => {
+      const now = Date.now();
+      if (now - lastLocationSentRef.current >= 4000) {
+        lastLocationSentRef.current = now;
+        updateLocationApi(coords.latitude, coords.longitude).catch((err) => {
+          if (err?.response?.status === 401 && err?.response?.data?.error?.includes('another device')) {
+            toast.error('You were logged out because this account was opened on another phone!');
+            if (typeof window !== 'undefined') window.location.href = '/login';
+          }
+        });
+      }
+    };
+
+    // 1. Send immediate GPS reading right away on duty start
+    navigator.geolocation.getCurrentPosition(
+      (pos) => sendCoords(pos.coords),
+      (err) => {
+        if (err.code === 1) {
+          toast.error('GPS permission denied! Please allow location access in your browser settings.');
         }
       },
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+    );
+
+    // 2. Active Movement Watcher
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => sendCoords(pos.coords),
       (err) => {
         console.debug('Geolocation watch warning:', err.message);
       },
@@ -175,8 +204,18 @@ export function useDeliveryPartner() {
       }
     );
 
+    // 3. Heartbeat: Broadcast every 6 seconds even when stationary so Live status stays green
+    const heartbeatInterval = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => sendCoords(pos.coords),
+        () => {},
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 4000 }
+      );
+    }, 6000);
+
     return () => {
       navigator.geolocation.clearWatch(watchId);
+      clearInterval(heartbeatInterval);
     };
   }, [isOnDuty]);
 
