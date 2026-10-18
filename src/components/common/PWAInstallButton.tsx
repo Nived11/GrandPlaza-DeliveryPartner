@@ -32,12 +32,23 @@ export default function PWAInstallButton({ variant = 'login' }: PWAInstallButton
       const isAppleDevice = /iphone|ipad|ipod/.test(userAgent);
       setIsIOS(isAppleDevice);
 
-      // 3. Listen for Android/Chrome beforeinstallprompt
+      // 3. Connect to prompt captured early by head script
+      if ((window as unknown as { __pwaDeferredPrompt?: BeforeInstallPromptEvent }).__pwaDeferredPrompt) {
+        setDeferredPrompt((window as unknown as { __pwaDeferredPrompt: BeforeInstallPromptEvent }).__pwaDeferredPrompt);
+      }
+
+      const handleEarlyPrompt = () => {
+        if ((window as unknown as { __pwaDeferredPrompt?: BeforeInstallPromptEvent }).__pwaDeferredPrompt) {
+          setDeferredPrompt((window as unknown as { __pwaDeferredPrompt: BeforeInstallPromptEvent }).__pwaDeferredPrompt);
+        }
+      };
+      window.addEventListener('pwa-prompt-available', handleEarlyPrompt);
+
       const handleBeforeInstall = (e: Event) => {
         e.preventDefault();
         setDeferredPrompt(e as BeforeInstallPromptEvent);
+        (window as unknown as { __pwaDeferredPrompt: Event }).__pwaDeferredPrompt = e;
       };
-
       window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
       // 4. Listen for appinstalled
@@ -49,6 +60,7 @@ export default function PWAInstallButton({ variant = 'login' }: PWAInstallButton
       window.addEventListener('appinstalled', handleAppInstalled);
 
       return () => {
+        window.removeEventListener('pwa-prompt-available', handleEarlyPrompt);
         window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
         window.removeEventListener('appinstalled', handleAppInstalled);
       };
@@ -66,22 +78,31 @@ export default function PWAInstallButton({ variant = 'login' }: PWAInstallButton
   }
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    const prompt =
+      deferredPrompt ||
+      (typeof window !== 'undefined'
+        ? (window as unknown as { __pwaDeferredPrompt?: BeforeInstallPromptEvent }).__pwaDeferredPrompt
+        : null);
+
+    if (prompt) {
       try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        await prompt.prompt();
+        const choice = await prompt.userChoice;
         if (choice.outcome === 'accepted') {
-          toast.success('Installing Delivery Partner App...');
+          toast.success('🎉 Installing Delivery Partner App...');
         }
         setDeferredPrompt(null);
+        if (typeof window !== 'undefined') {
+          (window as unknown as { __pwaDeferredPrompt?: null }).__pwaDeferredPrompt = null;
+        }
+        return;
       } catch (err) {
         console.warn('Install prompt error:', err);
-        setShowInstructions(true);
       }
-    } else {
-      // If no native prompt available (iOS or dismissed), open instructions modal
-      setShowInstructions(true);
     }
+
+    // If native prompt not triggered by browser (iOS or disabled), show instructions modal
+    setShowInstructions(true);
   };
 
   return (

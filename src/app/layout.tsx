@@ -44,6 +44,24 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        {/* 🚀 Catch PWA beforeinstallprompt immediately on early page load */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__pwaDeferredPrompt = null;
+              window.addEventListener('beforeinstallprompt', function(e) {
+                e.preventDefault();
+                window.__pwaDeferredPrompt = e;
+                window.dispatchEvent(new CustomEvent('pwa-prompt-available'));
+              });
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(){});
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body
         className={`${inter.className} min-h-screen w-full m-0 p-0 ${
