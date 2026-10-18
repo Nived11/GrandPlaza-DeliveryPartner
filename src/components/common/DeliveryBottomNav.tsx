@@ -47,14 +47,18 @@ export default function DeliveryBottomNav() {
 
       {/* 🚪 Logout Session Handler */}
       <button
-        onClick={logout}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          logout();
+        }}
         disabled={loggingOut}
-        className="flex flex-col items-center justify-center w-full h-full gap-1 text-gray-400 hover:text-red-500 transition cursor-pointer"
+        className="flex flex-col items-center justify-center w-full h-full gap-1 text-gray-400 hover:text-red-500 active:text-red-600 transition cursor-pointer select-none"
       >
-        <div className="p-1 rounded-xl hover:bg-red-50 transition">
-          <LogOut size={20} />
+        <div className="p-1 rounded-xl hover:bg-red-50 active:bg-red-100 transition">
+          <LogOut size={20} className={loggingOut ? 'animate-spin text-red-500' : ''} />
         </div>
-        <span className="text-[10px] uppercase tracking-wider">
+        <span className="text-[10px] uppercase tracking-wider font-semibold">
           {loggingOut ? 'Exiting...' : 'Sign Out'}
         </span>
       </button>

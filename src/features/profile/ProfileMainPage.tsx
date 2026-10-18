@@ -272,11 +272,15 @@ export default function ProfileMainPage() {
 
       {/* 🚪 Logout Button */}
       <button
-        onClick={logout}
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          logout();
+        }}
         disabled={loggingOut}
-        className="w-full py-3.5 rounded-2xl bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition active:scale-[0.98] cursor-pointer"
+        className="w-full py-3.5 rounded-2xl bg-white border border-red-200 hover:bg-red-50 text-red-600 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition active:scale-[0.98] cursor-pointer select-none"
       >
-        <LogOut size={16} />
+        <LogOut size={16} className={loggingOut ? 'animate-spin' : ''} />
         <span>{loggingOut ? 'Signing out...' : 'Sign Out Delivery Account'}</span>
       </button>
 

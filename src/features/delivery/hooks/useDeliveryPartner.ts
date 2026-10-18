@@ -47,6 +47,9 @@ export function useDeliveryPartner() {
 
   // 1. Fetch Profile and Duty Status
   const fetchProfile = useCallback(async () => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
+      return;
+    }
     try {
       const data = await getDeliveryProfileApi();
       setProfile(data);
@@ -59,6 +62,9 @@ export function useDeliveryPartner() {
   // 2. Fetch Active Deliveries & Available Orders
   const loadDeliveryData = useCallback(
     async (silent = false) => {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
+        return;
+      }
       if (!silent) setLoading(true);
 
       try {
@@ -168,6 +174,9 @@ export function useDeliveryPartner() {
 
     // Helper to send coordinates
     const sendCoords = (coords: GeolocationCoordinates) => {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
+        return;
+      }
       const now = Date.now();
       if (now - lastLocationSentRef.current >= 4000) {
         lastLocationSentRef.current = now;

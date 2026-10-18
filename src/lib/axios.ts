@@ -29,6 +29,11 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
     const loginRedirect = '/login';
 
+    // If user is currently logging out, avoid refresh loops or redundant alerts
+    if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 403) {
       const errorDetail = error.response.data?.detail;
       if (errorDetail === "Your account has been blocked by the admin. You are logged out.") {
