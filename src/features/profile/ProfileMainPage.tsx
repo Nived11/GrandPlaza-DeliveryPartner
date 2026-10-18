@@ -29,6 +29,7 @@ import {
   DeliveryBoyProfileData,
 } from '../delivery/types/deliveryTypes';
 import { useDeliveryLogout } from '../auth/hooks/useDeliveryLogout';
+import PWAInstallButton from '@/components/common/PWAInstallButton';
 
 export default function ProfileMainPage() {
   const { logout, loggingOut } = useDeliveryLogout();
@@ -269,6 +270,9 @@ export default function ProfileMainPage() {
           </div>
         )}
       </div>
+
+      {/* 📲 PWA App Installation Option */}
+      <PWAInstallButton variant="profile" />
 
       {/* 🚪 Logout Button */}
       <button

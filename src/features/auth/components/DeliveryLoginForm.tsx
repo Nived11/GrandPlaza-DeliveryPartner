@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Lock, User, Loader2, AlertCircle, Eye, EyeOff, ShieldCheck, Shield, Bike, Package } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDeliveryAuth } from "../hooks/useDeliveryAuth"; // 👈 Updated Hook
+import PWAInstallButton from "@/components/common/PWAInstallButton";
 
 export default function DeliveryLoginForm() {
   const { login, loading, error } = useDeliveryAuth();
@@ -21,8 +22,8 @@ export default function DeliveryLoginForm() {
   };
 
   return (
-    // 👑 STRICT 100vh / NO-SCROLL CANVAS (Fixed Mobile Scroll Issues)
-    <div className="h-[100dvh] w-full flex flex-col lg:flex-row font-sans antialiased empire-geometric-bg bg-[var(--brand-green-dark)] overflow-hidden relative">
+    // 👑 SEAMLESS FULL-SCREEN CANVAS (Fixed Mobile White Bar Gap & Centering Issues)
+    <div className="min-h-[100dvh] w-full flex flex-col lg:flex-row font-sans antialiased empire-geometric-bg bg-[#015a41] relative">
       
       {/* 🟢 LEFT SIDE: EMPIRE DARK GREEN GEOMETRIC BRANDING PANEL (Desktop / Laptop Only) */}
       <div className="hidden lg:flex lg:w-1/2 text-brand-cream flex-col justify-between p-8 xl:p-16 relative overflow-hidden h-full">
@@ -244,6 +245,11 @@ export default function DeliveryLoginForm() {
             </form>
 
           </motion.div>
+          
+          {/* 📲 PWA APP INSTALL BUTTON */}
+          <div className="w-full pt-1">
+            <PWAInstallButton variant="login" />
+          </div>
 
         </div>
         
