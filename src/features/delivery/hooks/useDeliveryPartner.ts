@@ -159,8 +159,8 @@ export function useDeliveryPartner() {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const now = Date.now();
-        // Throttle updates: send once every 20 seconds
-        if (now - lastLocationSentRef.current >= 20000) {
+        // Throttle updates: send once every 5 seconds for Swiggy-like live tracking
+        if (now - lastLocationSentRef.current >= 5000) {
           lastLocationSentRef.current = now;
           updateLocationApi(pos.coords.latitude, pos.coords.longitude).catch(() => {});
         }
@@ -170,8 +170,8 @@ export function useDeliveryPartner() {
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 10000,
-        timeout: 10000,
+        maximumAge: 0,
+        timeout: 8000,
       }
     );
 
