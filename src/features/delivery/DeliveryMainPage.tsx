@@ -120,7 +120,7 @@ export default function DeliveryMainPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          {/* 🛵 Active Deliveries Section (Swiggy/Zomato Batch Management: Up to 4 Orders) */}
+          {/* 🛵 Active Deliveries Section (Batch Management: Up to 4 Orders) */}
           {activeDeliveries.length > 0 && (
             <div className="space-y-3.5">
               
@@ -160,7 +160,7 @@ export default function DeliveryMainPage() {
                 )}
               </div>
 
-              {/* 🎛️ Segmented Tabs if Multiple Orders Active (Swiggy Multi-Order Switcher) */}
+              {/* 🎛️ Segmented Tabs if Multiple Orders Active (Multi-Order Switcher) */}
               {activeDeliveries.length > 1 && (
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
                   <button
@@ -249,7 +249,7 @@ export default function DeliveryMainPage() {
         </div>
       )}
 
-      {/* 🚨 Swiggy/Zomato Prominent Incoming Order Pop-up Modal with Sound */}
+      {/* 🚨 Prominent Incoming Order Pop-up Modal with Sound */}
       <IncomingOrderModal
         order={incomingOrderOffer}
         isOpen={Boolean(incomingOrderOffer)}

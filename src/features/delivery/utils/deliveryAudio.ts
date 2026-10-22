@@ -1,4 +1,4 @@
-// Web Audio API generator for Swiggy/Zomato style delivery alerts & chimes
+// Web Audio API generator for delivery alerts & chimes
 
 let audioCtx: AudioContext | null = null;
 let alertLoopInterval: NodeJS.Timeout | null = null;
@@ -20,7 +20,7 @@ const getAudioContext = (): AudioContext | null => {
 };
 
 /**
- * 🚨 Swiggy / Zomato style loud incoming order alert tone (2-tone pulsing ring)
+ * 🚨 Loud incoming order alert tone (2-tone pulsing ring)
  */
 export const playSingleOrderChime = () => {
   try {

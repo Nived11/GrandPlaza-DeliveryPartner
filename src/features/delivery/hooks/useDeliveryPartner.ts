@@ -93,7 +93,7 @@ export function useDeliveryPartner() {
         } else {
           const freshOrders = orders.filter((o) => !knownAvailableIdsRef.current.has(o.id));
           if (freshOrders.length > 0) {
-            // Trigger Swiggy/Zomato style full alert modal if rider is on duty and has capacity
+            // Trigger full alert modal if rider is on duty and has capacity
             if (isOnDutyRef.current && activeDeliveriesCountRef.current < MAX_BATCH_LIMIT) {
               setIncomingOrderOffer(freshOrders[0]);
             }

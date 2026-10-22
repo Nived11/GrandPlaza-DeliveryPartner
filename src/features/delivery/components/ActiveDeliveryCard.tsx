@@ -72,7 +72,7 @@ export default function ActiveDeliveryCard({
 
       <div className="p-4 sm:p-5 space-y-4">
         
-        {/* 💵 Swiggy / Zomato Bold COD Warning Banner */}
+        {/* 💵 Prominent COD Warning Banner */}
         {isCOD ? (
           <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-md shadow-amber-500/20">
             <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ export default function ActiveDeliveryCard({
           )}
         </div>
 
-        {/* 🏁 Swiggy/Zomato Interactive "Swipe to Deliver" Slider */}
+        {/* 🏁 Interactive "Swipe to Deliver" Slider */}
         <div className="space-y-1.5 pt-1">
           <SwipeToConfirm
             onConfirm={onOpenCompleteModal}

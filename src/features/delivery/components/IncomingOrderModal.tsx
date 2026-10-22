@@ -173,7 +173,7 @@ export default function IncomingOrderModal({
             </div>
           </div>
 
-          {/* 📍 Swiggy/Zomato Route Journey Representation */}
+          {/* 📍 Route Journey Representation */}
           <div className="bg-slate-950/60 rounded-2xl p-3.5 border border-slate-800 space-y-3">
             {/* Pick up */}
             <div className="flex items-start gap-3">
