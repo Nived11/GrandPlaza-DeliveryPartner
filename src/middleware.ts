@@ -22,8 +22,20 @@ async function verifyJwtRole(token: string): Promise<string | null> {
     const secretKey =
       process.env.JWT_SECRET_KEY ||
       process.env.DJANGO_SECRET_KEY ||
-      process.env.SECRET_KEY ||
-      'django-insecure-5t=7)&fav4_i&o!*ftlu^1#s$xx*fk1q4a!94r$&t+hn4pz=s2';
+      process.env.SECRET_KEY;
+
+    // Fail closed if no signing key is configured
+    if (!secretKey) {
+      return null;
+    }
+
+    // Validate algorithm and type in header
+    const headerBytes = base64UrlToUint8Array(headerB64);
+    const headerStr = new TextDecoder().decode(headerBytes as any);
+    const header = JSON.parse(headerStr);
+    if (header.alg !== 'HS256' || header.typ !== 'JWT') {
+      return null;
+    }
 
     const enc = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -44,7 +56,8 @@ async function verifyJwtRole(token: string): Promise<string | null> {
     const payloadStr = new TextDecoder().decode(payloadBytes as any);
     const payload = JSON.parse(payloadStr);
 
-    if (payload.exp && Date.now() >= payload.exp * 1000) {
+    // Enforce required, finite expiry
+    if (!payload.exp || typeof payload.exp !== 'number' || Date.now() >= payload.exp * 1000) {
       return null;
     }
 
