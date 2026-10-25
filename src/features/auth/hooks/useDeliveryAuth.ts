@@ -29,8 +29,13 @@ export const useDeliveryAuth = () => {
 
       toast.success(`Welcome back, ${username}!`);
       
-      router.push("/");
-      router.refresh();
+      // Hard navigation ensures browser commits HttpOnly cookies cleanly and purges stale route cache
+      if (typeof window !== "undefined") {
+        window.location.href = "/";
+      } else {
+        router.push("/");
+        router.refresh();
+      }
     } catch (err: any) {
       const errorMessage = extractErrorMessages(err);
       setError(errorMessage);
