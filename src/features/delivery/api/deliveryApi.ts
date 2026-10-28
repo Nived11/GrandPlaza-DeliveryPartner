@@ -59,11 +59,12 @@ export const completeDeliveryApi = async (orderId: number): Promise<DeliveryAssi
 export const updateLocationApi = async (
   latitude: number | null, 
   longitude: number | null, 
-  gps_disabled = false
+  gps_disabled = false,
+  accuracy: number | null = null
 ): Promise<any> => {
   const payload = gps_disabled || latitude == null || longitude == null
     ? { gps_disabled: true }
-    : { latitude, longitude };
+    : { latitude, longitude, accuracy };
   const response = await axiosInstance.post('/delivery/update-location', payload);
   return response.data;
 };

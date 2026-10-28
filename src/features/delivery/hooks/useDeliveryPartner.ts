@@ -40,6 +40,7 @@ export function useDeliveryPartner() {
   const lastLocationSentRef = useRef<number>(0);
   const activeDeliveriesCountRef = useRef<number>(0);
   const isOnDutyRef = useRef<boolean>(true);
+  const bestAccuracyRef = useRef<number>(9999);
 
   // Keep refs updated for event callbacks
   activeDeliveriesCountRef.current = activeDeliveries.length;
@@ -180,15 +181,32 @@ export function useDeliveryPartner() {
       updateLocationApi(null, null, true).catch(() => {});
     };
 
-    // Helper to send coordinates
+    // Helper to send coordinates with high accuracy prioritization
     const sendCoords = (coords: GeolocationCoordinates) => {
       if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
         return;
       }
+      const accuracy = coords.accuracy; // accuracy in meters
       const now = Date.now();
+
+      // Guard: If we already have a precise satellite fix (< 50m) and the new fix is a wild cell-tower jump (> 150m),
+      // ignore the low-accuracy jump unless 20s have passed without updates
+      if (
+        bestAccuracyRef.current < 50 &&
+        accuracy > 150 &&
+        now - lastLocationSentRef.current < 20000
+      ) {
+        console.debug('Skipping coarse cell-tower jump:', accuracy, 'm');
+        return;
+      }
+
+      if (accuracy < bestAccuracyRef.current || now - lastLocationSentRef.current > 30000) {
+        bestAccuracyRef.current = accuracy;
+      }
+
       if (now - lastLocationSentRef.current >= 4000) {
         lastLocationSentRef.current = now;
-        updateLocationApi(coords.latitude, coords.longitude).catch((err) => {
+        updateLocationApi(coords.latitude, coords.longitude, false, Math.round(accuracy)).catch((err) => {
           if (err?.response?.status === 401 && err?.response?.data?.error?.includes('another device')) {
             toast.error('You were logged out because this account was opened on another phone!');
             if (typeof window !== 'undefined') window.location.href = '/login';
@@ -208,30 +226,33 @@ export function useDeliveryPartner() {
       }
     };
 
+    // Strict High-Accuracy GNSS hardware options (maximumAge: 0 forces real satellite fix, no cached Wi-Fi location)
+    const strictGeoOptions: PositionOptions = {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 12000,
+    };
+
     // 1. Send immediate GPS reading right away on duty start
     navigator.geolocation.getCurrentPosition(
       (pos) => sendCoords(pos.coords),
       handleGeoError,
-      { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+      strictGeoOptions
     );
 
-    // 2. Active Movement Watcher
+    // 2. Active Movement Watcher (continuous satellite stream)
     const watchId = navigator.geolocation.watchPosition(
       (pos) => sendCoords(pos.coords),
       handleGeoError,
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 8000,
-      }
+      strictGeoOptions
     );
 
-    // 3. Heartbeat: Broadcast every 6 seconds even when stationary so Live status stays green
+    // 3. Heartbeat: Broadcast fresh satellite reading every 6 seconds even when stationary
     const heartbeatInterval = setInterval(() => {
       navigator.geolocation.getCurrentPosition(
         (pos) => sendCoords(pos.coords),
         handleGeoError,
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 4000 }
+        strictGeoOptions
       );
     }, 6000);
 
