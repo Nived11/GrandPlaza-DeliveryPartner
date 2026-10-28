@@ -172,6 +172,14 @@ export function useDeliveryPartner() {
       toast.warning('Live GPS requires secure HTTPS! Please open https://delivery.grandeplaza.com');
     }
 
+    // Helper to notify server when GPS is lost or disabled
+    const notifyGpsLost = () => {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
+        return;
+      }
+      updateLocationApi(null, null, true).catch(() => {});
+    };
+
     // Helper to send coordinates
     const sendCoords = (coords: GeolocationCoordinates) => {
       if (typeof window !== 'undefined' && sessionStorage.getItem('is_logging_out') === 'true') {
@@ -189,23 +197,28 @@ export function useDeliveryPartner() {
       }
     };
 
+    const handleGeoError = (err: GeolocationPositionError) => {
+      if (err.code === 1 || err.code === 2) {
+        notifyGpsLost();
+        if (err.code === 1) {
+          toast.error('GPS permission denied! Please allow location access in your browser settings.');
+        } else if (err.code === 2) {
+          toast.warning('GPS location is turned off! Please turn on device GPS.');
+        }
+      }
+    };
+
     // 1. Send immediate GPS reading right away on duty start
     navigator.geolocation.getCurrentPosition(
       (pos) => sendCoords(pos.coords),
-      (err) => {
-        if (err.code === 1) {
-          toast.error('GPS permission denied! Please allow location access in your browser settings.');
-        }
-      },
+      handleGeoError,
       { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
     );
 
     // 2. Active Movement Watcher
     const watchId = navigator.geolocation.watchPosition(
       (pos) => sendCoords(pos.coords),
-      (err) => {
-        console.debug('Geolocation watch warning:', err.message);
-      },
+      handleGeoError,
       {
         enableHighAccuracy: true,
         maximumAge: 0,
@@ -217,7 +230,7 @@ export function useDeliveryPartner() {
     const heartbeatInterval = setInterval(() => {
       navigator.geolocation.getCurrentPosition(
         (pos) => sendCoords(pos.coords),
-        () => {},
+        handleGeoError,
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 4000 }
       );
     }, 6000);
@@ -248,6 +261,7 @@ export function useDeliveryPartner() {
         toast.success('🟢 You are now ONLINE! Ready for delivery orders.');
       } else {
         setIncomingOrderOffer(null);
+        updateLocationApi(null, null, true).catch(() => {});
         toast.warning('🔴 You are now OFFLINE.');
       }
     } catch (err: unknown) {

@@ -55,8 +55,15 @@ export const completeDeliveryApi = async (orderId: number): Promise<DeliveryAssi
   return response.data;
 };
 
-// 📍 8. Send live GPS coordinates
-export const updateLocationApi = async (latitude: number, longitude: number): Promise<any> => {
-  const response = await axiosInstance.post('/delivery/update-location', { latitude, longitude });
+// 📍 8. Send live GPS coordinates or notify GPS disabled
+export const updateLocationApi = async (
+  latitude: number | null, 
+  longitude: number | null, 
+  gps_disabled = false
+): Promise<any> => {
+  const payload = gps_disabled || latitude == null || longitude == null
+    ? { gps_disabled: true }
+    : { latitude, longitude };
+  const response = await axiosInstance.post('/delivery/update-location', payload);
   return response.data;
 };
